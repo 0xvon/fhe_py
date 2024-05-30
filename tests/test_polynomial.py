@@ -1,4 +1,6 @@
+from math import log
 import unittest
+from util.math.crt import CRTContext
 from util.polynomial import Polynomial
 from util.tools import multiply_polynomials_rq
 from util.random_sampling import sample_uniform
@@ -42,16 +44,37 @@ class TestPolynomial(unittest.TestCase):
         poly2 = Polynomial(degree2, coeffs2)
         result = poly1.multiply(poly2)
         self.assertEqual(result.degree, min(degree1, degree2))
-        
         # Compute the expected result locally using numpy
         expected_coeffs = multiply_polynomials_rq(np.array(coeffs1), np.array(coeffs2)).tolist()
-        
-        # self.assertEqual(result.degree, len(expected_coeffs))
         self.assertEqual(
             [round(c, 2) for c in result.coeffs],
             [round(c, 2) for c in expected_coeffs],
-            f"Error: The result is incorrect!!!: {coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}"
+            f"Error: The simple multiplication result is incorrect!!!: {coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}"
         )
+        
+    @given(
+        lists(integers(min_value=-10000, max_value=10000), min_size=4, max_size=4),
+        lists(integers(min_value=-10000, max_value=10000), min_size=4, max_size=4)
+    )
+    def test_multiply_crt(self, coeffs1, coeffs2):
+        log_modulus = 10
+        modulus = 1 << log_modulus
+        prime_size = 59
+        log_poly_degree = 2
+        poly_degree = 1 << log_poly_degree
+        num_primes = (2 + log_poly_degree + 4 * log_modulus + prime_size - 1) // prime_size
+        crt = CRTContext(num_primes, prime_size, poly_degree)
+        poly1 = Polynomial(poly_degree, coeffs1)
+        poly2 = Polynomial(poly_degree, coeffs2)
+        poly_prod = poly1.crt_multiply(poly2, crt)
+        poly_prod = poly_prod.mod_small(modulus)
+        poly_prod2 = poly2.crt_multiply(poly1, crt)
+        poly_prod2 = poly_prod2.mod_small(modulus)
+        actual = poly1.simple_multiply(poly2, modulus)
+        actual = actual.mod_small(modulus)
+        print(f"{coeffs1} * {coeffs2} = {poly_prod.coeffs}")
+        self.assertEqual(poly_prod.coeffs, actual.coeffs, f'CRT multiplication failed: {poly_prod.coeffs} != {actual.coeffs}')
+        self.assertEqual(poly_prod.coeffs, poly_prod2.coeffs)
     
     def test_rotate(self):
         poly1 = Polynomial(4, [0, 1, 4, 59])

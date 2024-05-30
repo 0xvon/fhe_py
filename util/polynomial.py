@@ -3,6 +3,9 @@ Polynomial Ring Module
 """
 from typing import Optional, Sequence
 
+from util.math.crt import CRTContext
+from util.math.ntt import NTTContext
+
 Vector = Sequence[int | float]
 
 class Polynomial:
@@ -34,9 +37,36 @@ class Polynomial:
         poly = Polynomial(poly.degree, [-x for x in poly.coeffs])
         return self.add(poly, coeff_modulus)
 
-    def multiply(self, poly, coeff_modulus: Optional[int] = None, ntt = None, crt = None):
-        # TODO: impl NTT and CRT
+    def multiply(
+        self,
+        poly,
+        coeff_modulus: Optional[int] = None,
+        ntt: Optional[NTTContext] = None,
+        crt: Optional[CRTContext] = None,
+    ):
+        if crt: return self.crt_multiply(poly, crt)
+        
+        if ntt:
+            a = ntt.ftt_fwd(self.coeffs)
+            b = ntt.ftt_fwd(poly.coeffs)
+            ab = [a[i] * b[i] for i in range(self.degree)]
+            prod = ntt.ftt_inv(ab)
+            return Polynomial(self.degree, prod)
+        
         return self.simple_multiply(poly, coeff_modulus)
+    
+    def crt_multiply(self, poly, crt: CRTContext):
+        poly_prods = []
+        for i in range(len(crt.primes)):
+            prod = self.multiply(poly, crt.primes[i], ntt=crt.ntts[i])
+            poly_prods.append(prod)
+            
+        final_coeffs = [0] * self.degree
+        for i in range(self.degree):
+            values = [p.coeffs[i] for p in poly_prods]
+            final_coeffs[i] = crt.reconstruct(values)
+            
+        return Polynomial(self.degree, final_coeffs).mod_small(crt.modulus)
 
     def simple_multiply(self, poly, coeff_modulus: Optional[int] = None):
         deg = min(poly.degree, self.degree)
@@ -69,6 +99,30 @@ class Polynomial:
 
     def mod(self, coeffs: Vector, coeff_modulus: int):
         return [c % coeff_modulus for c in coeffs]
+    
+    def mod_small(self, coeff_modulus):
+        """Turns all coefficients in the given coefficient modulus
+        to the range (-q/2, q/2].
+
+        Turns all coefficients of the current polynomial
+        in the given coefficient modulus to the range (-q/2, q/2].
+
+        Args:
+            coeff_modulus (int): Modulus a of coefficients of polynomial
+                ring R_a.
+
+        Returns:
+            A Polynomial whose coefficients are modulo coeff_modulus.
+        """
+        try:
+            new_coeffs = [c % coeff_modulus for c in self.coeffs]
+            new_coeffs = [c - coeff_modulus if c > coeff_modulus // 2 else c for c in new_coeffs]
+        except:
+            print(self.coeffs)
+            print(coeff_modulus)
+            new_coeffs = [c % coeff_modulus for c in self.coeffs]
+            new_coeffs = [c - coeff_modulus if c > coeff_modulus // 2 else c for c in new_coeffs]
+        return Polynomial(self.degree, new_coeffs)
         
     def rotate(self, r):
         """Rotates plaintext polynomial by r steps.
