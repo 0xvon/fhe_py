@@ -10,6 +10,7 @@ source venv/bin/activate
 #### Installation
 
 ```bash
+pip install -e .
 pip install -r requirements.txt
 ```
 

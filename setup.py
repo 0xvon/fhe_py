@@ -7,5 +7,5 @@ setup(
     author_email='kingmasatojames@gmail.com',
     license='MIT',
     install_requires=['numpy', 'pytest'],
-    packages=['util', 'tests']
+    packages=['util', 'tests', 'bfv']
 )

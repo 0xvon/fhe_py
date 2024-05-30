@@ -27,7 +27,7 @@ class Polynomial:
         new_coeffs = [self.coeffs[i] + poly.coeffs[i] for i in range(self.degree)]
         
         if coeff_modulus:
-            new_coeffs = self.mod(new_coeffs, coeff_modulus)
+            new_coeffs = [c % coeff_modulus for c in new_coeffs]
             
         return Polynomial(self.degree, new_coeffs)
             
@@ -107,22 +107,32 @@ class Polynomial:
             new_coeffs[index] += sign * coeff
 
         if coeff_modulus:
-            new_coeffs = self.mod(new_coeffs, coeff_modulus)
+            new_coeffs = [c % coeff_modulus for c in new_coeffs]
             
         return Polynomial(deg, new_coeffs)
-                
+    
+    def scalar_multiply(self, scalar: int, coeff_modulus: Optional[int] = None):
+        """Multiplies polynomial by a scalar.
+        """
+        if coeff_modulus:
+            new_coeffs = [(c * scalar) % coeff_modulus for c in self.coeffs]
+        else:
+            new_coeffs = [c * scalar for c in self.coeffs]
+        return Polynomial(self.degree, new_coeffs)
+        
     def divide(self, scalar: int, coeff_modulus: Optional[int] = None):
         """Divides polynomial by a scalar.
         """
         new_coeffs = [(c // scalar) for c in self.coeffs if coeff_modulus]
         
         if coeff_modulus:
-            new_coeffs = self.mod(new_coeffs, coeff_modulus)
+            new_coeffs = [c % coeff_modulus for c in new_coeffs]
             
         return Polynomial(self.degree, new_coeffs)
 
-    def mod(self, coeffs: Vector, coeff_modulus: int):
-        return [c % coeff_modulus for c in coeffs]
+    def mod(self, coeff_modulus: int):
+        new_coeffs = [c % coeff_modulus for c in self.coeffs]
+        return Polynomial(self.degree, new_coeffs)
     
     def mod_small(self, coeff_modulus):
         """Turns all coefficients in the given coefficient modulus
