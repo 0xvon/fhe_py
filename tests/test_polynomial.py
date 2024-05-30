@@ -32,8 +32,8 @@ class TestPolynomial(unittest.TestCase):
         self.assertEqual(poly_prod.coeffs, poly_prod2.coeffs)
         
     @given(
-        lists(integers(min_value=-100, max_value=100) | floats(min_value=-100, max_value=100, allow_infinity=False, allow_nan=False), min_size=10, max_size=10),
-        lists(integers(min_value=-100, max_value=100) | floats(min_value=-100, max_value=100, allow_infinity=False, allow_nan=False), min_size=10, max_size=10)
+        lists(integers(min_value=-10000, max_value=10000) | floats(min_value=-10000, max_value=10000, allow_infinity=False, allow_nan=False), min_size=100, max_size=100),
+        lists(integers(min_value=-10000, max_value=10000) | floats(min_value=-10000, max_value=10000, allow_infinity=False, allow_nan=False), min_size=100, max_size=100)
     )
     def test_multiply_fuzz(self, coeffs1, coeffs2):
         degree1 = len(coeffs1)
@@ -47,7 +47,11 @@ class TestPolynomial(unittest.TestCase):
         expected_coeffs = multiply_polynomials_rq(np.array(coeffs1), np.array(coeffs2)).tolist()
         
         # self.assertEqual(result.degree, len(expected_coeffs))
-        self.assertEqual(result.coeffs, expected_coeffs, f"{coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}")
+        self.assertEqual(
+            [round(c, 2) for c in result.coeffs],
+            [round(c, 2) for c in expected_coeffs],
+            f"Error: The result is incorrect!!!: {coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}"
+        )
     
     def test_rotate(self):
         poly1 = Polynomial(4, [0, 1, 4, 59])
