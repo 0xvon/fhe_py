@@ -4,7 +4,7 @@ Polynomial Ring Module
 from typing import Optional, Sequence
 
 from util.math.crt import CRTContext
-from util.math.ntt import NTTContext
+from util.math.ntt import FFTContext, NTTContext
 
 Vector = Sequence[int | float]
 
@@ -67,7 +67,31 @@ class Polynomial:
             final_coeffs[i] = crt.reconstruct(values)
             
         return Polynomial(self.degree, final_coeffs).mod_small(crt.modulus)
+    
+    def fft_multiply(self, poly, round=True):
+        """Multiplies two polynomials using FFT.
+        """
+        assert isinstance(poly, Polynomial)
+        
+        fft = FFTContext(self.degree * 8)
+        a = fft.fft_fwd(self.coeffs + [0] * self.degree) # type: ignore
+        b = fft.fft_fwd(poly.coeffs + [0] * self.degree) # type: ignore
+        ab = [a[i] * b[i] for i in range(self.degree * 2)]
+        prod = fft.fft_inv(ab)
+        poly_prod = [0] * self.degree
 
+        for d in range(2 * self.degree - 1):
+            # Since x^d = -1, the degree is taken mod d, and the sign
+            # changes when the exponent is > d.
+            index = d % self.degree
+            sign = (int(d < self.degree) - 0.5) * 2
+            poly_prod[index] += sign * prod[d] # type: ignore
+
+        if round:
+            return Polynomial(self.degree, poly_prod).round()
+        else:
+            return Polynomial(self.degree, poly_prod)
+        
     def simple_multiply(self, poly, coeff_modulus: Optional[int] = None):
         deg = min(poly.degree, self.degree)
         new_coeffs = [0] * deg

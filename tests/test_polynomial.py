@@ -56,7 +56,7 @@ class TestPolynomial(unittest.TestCase):
         lists(integers(min_value=-10000, max_value=10000), min_size=4, max_size=4),
         lists(integers(min_value=-10000, max_value=10000), min_size=4, max_size=4)
     )
-    def test_multiply_crt(self, coeffs1, coeffs2):
+    def test_crt_multiply(self, coeffs1, coeffs2):
         log_modulus = 10
         modulus = 1 << log_modulus
         prime_size = 59
@@ -75,7 +75,25 @@ class TestPolynomial(unittest.TestCase):
         print(f"{coeffs1} * {coeffs2} = {poly_prod.coeffs}")
         self.assertEqual(poly_prod.coeffs, actual.coeffs, f'CRT multiplication failed: {poly_prod.coeffs} != {actual.coeffs}')
         self.assertEqual(poly_prod.coeffs, poly_prod2.coeffs)
-    
+        
+    @given(
+        lists(integers(min_value=-100000, max_value=100000), min_size=128, max_size=128),
+        lists(integers(min_value=-100000, max_value=100000), min_size=128, max_size=128)
+    )
+    def test_fft_multiply(self, coeffs1, coeffs2):
+        degree1 = len(coeffs1)
+        degree2 = len(coeffs2)
+        poly1 = Polynomial(degree1, coeffs1)
+        poly2 = Polynomial(degree2, coeffs2)
+        result = poly1.fft_multiply(poly2)
+        print(f"{coeffs1} * {coeffs2} = {result.coeffs}")
+        expected_coeffs = multiply_polynomials_rq(np.array(coeffs1), np.array(coeffs2)).tolist()
+        self.assertEqual(
+            [c for c in result.coeffs],
+            [c for c in expected_coeffs],
+            f"Error: The simple multiplication result is incorrect!!!: {coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}"
+        )
+        
     def test_rotate(self):
         poly1 = Polynomial(4, [0, 1, 4, 59])
         poly_rot = poly1.rotate(3)
