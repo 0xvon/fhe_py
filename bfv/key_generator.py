@@ -1,4 +1,5 @@
 from math import ceil, floor, log, sqrt
+from typing import List
 from bfv.parameters import BFVParameters
 from bfv.relin_key import BFVRelinKey
 from util.crypto.public_key import PublicKey
@@ -10,6 +11,7 @@ class BFVKeyGenerator:
     def __init__(self, params: BFVParameters):
         self.generate_secret_key(params)
         self.generate_public_key(params)
+        self.generate_relin_key(params)
         
     def generate_secret_key(self, params: BFVParameters):
         self.secret_key = SecretKey(Polynomial(params.poly_degree, sample_triangle(params.poly_degree)))
@@ -32,21 +34,18 @@ class BFVKeyGenerator:
         base = ceil(sqrt(params.ciph_modulus))
         num_levels = floor(log(params.ciph_modulus, base)) + 1
         
-        keys = [0] * num_levels
+        keys: List[tuple] = [0] * num_levels
         power = 1
         sk_squared = self.secret_key.s.multiply(self.secret_key.s, params.ciph_modulus)
         
         for i in range(num_levels):
             k1 = Polynomial(params.poly_degree, sample_uniform(0, params.ciph_modulus, params.poly_degree))
             error = Polynomial(params.poly_degree, sample_triangle(params.poly_degree))
-            k0 = self.secret_key.s \
-                .multiply(k1, params.ciph_modulus) \
-                .add(error, params.ciph_modulus) \
-                .scalar_multiply(-1) \
-                .add(sk_squared.scalar_multiply(power), params.ciph_modulus) \
-                .mod(params.ciph_modulus)
+            k0 = self.secret_key.s.multiply(k1, params.ciph_modulus).add(
+                    error, params.ciph_modulus).scalar_multiply(-1).add(
+                        sk_squared.scalar_multiply(power), params.ciph_modulus).mod(params.ciph_modulus)
                 
-            keys[i] = (k0, k1) # type: ignore
+            keys[i] = (k0, k1)
             power *= base
             power %= params.ciph_modulus
             

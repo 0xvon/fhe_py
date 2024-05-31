@@ -2,7 +2,7 @@ from datetime import timedelta
 import os
 import unittest
 from hypothesis import given, settings
-from hypothesis.strategies import lists, integers, floats
+from hypothesis.strategies import lists, integers
 
 from bfv.decryptor import BFVDecryptor
 from bfv.encryptor import BFVEncryptor

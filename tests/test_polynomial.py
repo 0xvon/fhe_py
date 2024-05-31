@@ -1,4 +1,4 @@
-from math import log
+from math import ceil, floor, log, sqrt
 import unittest
 from util.math.crt import CRTContext
 from util.polynomial import Polynomial
@@ -93,6 +93,13 @@ class TestPolynomial(unittest.TestCase):
             [c for c in expected_coeffs],
             f"Error: The simple multiplication result is incorrect!!!: {coeffs1} * {coeffs2} = {result.coeffs} != {expected_coeffs}"
         )
+
+    def test_base_decompose(self):
+        base = ceil(sqrt(self.coeff_modulus))
+        num_levels = floor(log(self.coeff_modulus, base)) + 1
+        poly_decomposed = self.poly1.base_decompose(base, num_levels)
+        self.assertEqual(poly_decomposed[0].coeffs, [0, 1, 4, 5, 3])
+        self.assertEqual(poly_decomposed[1].coeffs, [0, 0, 0, 0, 7])
         
     def test_rotate(self):
         poly1 = Polynomial(4, [0, 1, 4, 59])

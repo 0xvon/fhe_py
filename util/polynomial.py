@@ -1,6 +1,8 @@
 """
 Polynomial Ring Module
 """
+from __future__ import annotations
+
 from typing import Optional, Sequence
 
 from util.math.crt import CRTContext
@@ -22,7 +24,7 @@ class Polynomial:
         assert len(coeffs) == degree, 'Polynomial size %d is not equal to %d' %(len(coeffs), degree)
         self.coeffs = coeffs
 
-    def add(self, poly, coeff_modulus: Optional[int] = None):
+    def add(self, poly: Polynomial, coeff_modulus: Optional[int] = None) -> Polynomial:
         assert self.degree == poly.degree, 'Poly size is not same'
         new_coeffs = [self.coeffs[i] + poly.coeffs[i] for i in range(self.degree)]
         
@@ -32,18 +34,18 @@ class Polynomial:
         return Polynomial(self.degree, new_coeffs)
             
 
-    def subtract(self, poly, coeff_modulus: Optional[int] = None):
+    def subtract(self, poly: Polynomial, coeff_modulus: Optional[int] = None) -> Polynomial:
         # inverse the polynomial
         poly = Polynomial(poly.degree, [-x for x in poly.coeffs])
         return self.add(poly, coeff_modulus)
 
     def multiply(
         self,
-        poly,
+        poly: Polynomial,
         coeff_modulus: Optional[int] = None,
         ntt: Optional[NTTContext] = None,
         crt: Optional[CRTContext] = None,
-    ):
+    ) -> Polynomial:
         if crt: return self.crt_multiply(poly, crt)
         
         if ntt:
@@ -55,7 +57,7 @@ class Polynomial:
         
         return self.simple_multiply(poly, coeff_modulus)
     
-    def crt_multiply(self, poly, crt: CRTContext):
+    def crt_multiply(self, poly: Polynomial, crt: CRTContext) -> Polynomial:
         poly_prods = []
         for i in range(len(crt.primes)):
             prod = self.multiply(poly, crt.primes[i], ntt=crt.ntts[i])
@@ -68,7 +70,7 @@ class Polynomial:
             
         return Polynomial(self.degree, final_coeffs).mod_small(crt.modulus)
     
-    def fft_multiply(self, poly, round=True):
+    def fft_multiply(self, poly: Polynomial, round=True) -> Polynomial:
         """Multiplies two polynomials using FFT.
         """
         assert isinstance(poly, Polynomial)
@@ -92,7 +94,7 @@ class Polynomial:
         else:
             return Polynomial(self.degree, poly_prod)
         
-    def simple_multiply(self, poly, coeff_modulus: Optional[int] = None):
+    def simple_multiply(self, poly: Polynomial, coeff_modulus: Optional[int] = None) -> Polynomial:
         deg = min(poly.degree, self.degree)
         new_coeffs = [0] * deg
         for d in range(2 * deg - 1): 
@@ -111,7 +113,7 @@ class Polynomial:
             
         return Polynomial(deg, new_coeffs)
     
-    def scalar_multiply(self, scalar: int, coeff_modulus: Optional[int] = None):
+    def scalar_multiply(self, scalar: int, coeff_modulus: Optional[int] = None) -> Polynomial:
         """Multiplies polynomial by a scalar.
         """
         if coeff_modulus:
@@ -120,7 +122,7 @@ class Polynomial:
             new_coeffs = [c * scalar for c in self.coeffs]
         return Polynomial(self.degree, new_coeffs)
         
-    def divide(self, scalar: int, coeff_modulus: Optional[int] = None):
+    def divide(self, scalar: int, coeff_modulus: Optional[int] = None) -> Polynomial:
         """Divides polynomial by a scalar.
         """
         new_coeffs = [(c // scalar) for c in self.coeffs if coeff_modulus]
@@ -130,11 +132,11 @@ class Polynomial:
             
         return Polynomial(self.degree, new_coeffs)
 
-    def mod(self, coeff_modulus: int):
+    def mod(self, coeff_modulus: int) -> Polynomial:
         new_coeffs = [c % coeff_modulus for c in self.coeffs]
         return Polynomial(self.degree, new_coeffs)
     
-    def mod_small(self, coeff_modulus):
+    def mod_small(self, coeff_modulus: int) -> Polynomial:
         """Turns all coefficients in the given coefficient modulus
         to the range (-q/2, q/2].
 
@@ -158,7 +160,7 @@ class Polynomial:
             new_coeffs = [c - coeff_modulus if c > coeff_modulus // 2 else c for c in new_coeffs]
         return Polynomial(self.degree, new_coeffs)
         
-    def rotate(self, r):
+    def rotate(self, r: int) -> Polynomial:
         """Rotates plaintext polynomial by r steps.
         Rotates all the plaintext coefficients to the left such that the x^r
         coefficients is now the coefficient for x^0.
@@ -187,8 +189,24 @@ class Polynomial:
             new_coeffs[i] = -self.coeffs[self.degree - i]
             
         return Polynomial(self.degree, new_coeffs)
+    
+    def base_decompose(self, base: int, num_levels: int) -> list[Polynomial]:
+        """Decomposes the polynomial into base.
+        base (T): base to decompose coefficients into.
+        num_levels: Log of ciphertext modulus with the base.
+        [f(x) mod base, f(x)/base mod base, f(x)/base^2 mod base, ..., f(x)/base^(num_levels-1) mod base]
+        """
+        decomposed = [Polynomial(self.degree, [0] * self.degree) for _ in range(num_levels)]
+        poly = self
+
+        for i in range(num_levels):
+            decomposed[i] = poly.mod(base)
+            poly = poly.scalar_multiply(1 / base).floor()
+
+        return decomposed
         
-    def round(self):
+        
+    def round(self) -> Polynomial:
         """Rounds all coefficients to nearest integer.
         """
         if type(self.coeffs[0]) == complex:
@@ -198,7 +216,7 @@ class Polynomial:
             
         return Polynomial(self.degree, new_coeffs)
             
-    def floor(self):
+    def floor(self) -> Polynomial:
         """Rounds all coefficients down to the nearest integer.
         """
         new_coeffs = [int(c) for c in self.coeffs]  
