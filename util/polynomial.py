@@ -3,7 +3,7 @@ Polynomial Ring Module
 """
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 from util.math.crt import CRTContext
 from util.math.ntt import FFTContext, NTTContext
@@ -96,7 +96,7 @@ class Polynomial:
         
     def simple_multiply(self, poly: Polynomial, coeff_modulus: Optional[int] = None) -> Polynomial:
         deg = min(poly.degree, self.degree)
-        new_coeffs = [0] * deg
+        new_coeffs: List[float] = [0] * deg
         for d in range(2 * deg - 1): 
             index = d % deg
             sign = int(d < deg) * 2 - 1
@@ -113,7 +113,7 @@ class Polynomial:
             
         return Polynomial(deg, new_coeffs)
     
-    def scalar_multiply(self, scalar: int, coeff_modulus: Optional[int] = None) -> Polynomial:
+    def scalar_multiply(self, scalar: float, coeff_modulus: Optional[int] = None) -> Polynomial:
         """Multiplies polynomial by a scalar.
         """
         if coeff_modulus:

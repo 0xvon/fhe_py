@@ -34,7 +34,7 @@ class BFVKeyGenerator:
         base = ceil(sqrt(params.ciph_modulus))
         num_levels = floor(log(params.ciph_modulus, base)) + 1
         
-        keys: List[tuple] = [0] * num_levels
+        keys: List[tuple] = [(0, 0)] * num_levels
         power = 1
         sk_squared = self.secret_key.s.multiply(self.secret_key.s, params.ciph_modulus)
         
