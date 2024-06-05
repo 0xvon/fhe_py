@@ -1,8 +1,10 @@
 from datetime import timedelta
 import os
+from typing import List
 import unittest
+from ckks.encoder import CKKSEncoder
 from hypothesis import given, settings
-from hypothesis.strategies import lists, integers
+from hypothesis.strategies import lists, integers, complex_numbers
 
 from ckks.decryptor import CKKSDecryptor
 from ckks.encryptor import CKKSEncryptor
@@ -15,6 +17,7 @@ from bfv.key_generator import BFVKeyGenerator
 from bfv.parameters import BFVParameters
 from util.crypto.plaintext import Plaintext
 from util.polynomial import Polynomial
+from util.random_sampling import sample_random_complex_vector
 
 TEST_DIRECTORY = os.path.dirname(__file__)
 
@@ -48,24 +51,32 @@ class TestBFVEncDec(unittest.TestCase):
         self.assertEqual(str(pt), str(decrypted))
         
 class TestCKKSEncDec(unittest.TestCase):
-    @settings(deadline=timedelta(seconds=60))
-    @given(
-        lists(integers(min_value=0, max_value=255), min_size=64, max_size=64),
-    )
-    def test_ckks_enc_dec(self, message):
-        poly_degree = 64
-        ciph_modulus = 1 << 1200
-        big_modulus = 1 << 1200
-        scaling_factor = 1 << 30
-        
-        params = CKKSParameters(poly_degree, ciph_modulus, big_modulus, scaling_factor)
+    def setUp(self):
+        self.poly_degree = 64
+        self.ciph_modulus = 1 << 1200
+        self.big_modulus = 1 << 1200
+        self.scaling_factor = 1 << 30
+        self.error = 0.00001
+    
+    def ckks_enc_dec(self, message: List[complex]):
+        params = CKKSParameters(self.poly_degree, self.ciph_modulus, self.big_modulus, self.scaling_factor)
         key_generator = CKKSKeyGenerator(params)
         encryptor = CKKSEncryptor(params, key_generator.public_key)
         decryptor = CKKSDecryptor(params, key_generator.secret_key)
-        
-        pt = Plaintext(Polynomial(poly_degree, message))
+        encoder = CKKSEncoder(params)
+        pt = encoder.encode(message, self.scaling_factor)        
         ct = encryptor.encrypt(pt)
         decrypted = decryptor.decrypt(ct)
-        print(f"original is {str(pt)}\ndecrypted is {str(decrypted)}\n")
-        self.assertEqual(str(pt), str(decrypted))
+        decoded = encoder.decode(decrypted)
+        for i in range(len(message)):
+            print(f"comparing {message[i]} and {decoded[i]}...")
+            print(f"real part diff: {abs(message[i].real - decoded[i].real)}")
+            print(f"img part diff: {abs(message[i].imag - decoded[i].imag)}")
+            self.assertTrue(abs(message[i].real - decoded[i].real) < self.error)
+            self.assertTrue(abs(message[i].imag - decoded[i].imag) < self.error)
         
+    def test_ckks_enc_dec(self):
+        attempts = 1000
+        for _ in range(attempts):
+            message = sample_random_complex_vector(self.poly_degree // 2)
+            self.ckks_enc_dec(message)

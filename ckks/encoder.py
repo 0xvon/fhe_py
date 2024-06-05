@@ -1,4 +1,4 @@
-from ast import List
+from typing import List
 from ckks.parameters import CKKSParameters
 from util.crypto.plaintext import Plaintext
 from util.math.ntt import FFTContext
