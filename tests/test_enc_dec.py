@@ -4,7 +4,7 @@ from typing import List
 import unittest
 from ckks.encoder import CKKSEncoder
 from hypothesis import given, settings
-from hypothesis.strategies import lists, integers, complex_numbers
+from hypothesis.strategies import lists, integers
 
 from ckks.decryptor import CKKSDecryptor
 from ckks.encryptor import CKKSEncryptor
